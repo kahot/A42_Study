@@ -4,33 +4,33 @@ library(cowplot)
 library(colorspace)
 
 #Read 1.3ug data file
-a42<-read.csv("Data/A42_mutants1.3.csv", stringsAsFactors = F)
-a42$Mutants<-gsub(" .*","",a42$Mutants)
-a42[1, 3:4]<-"Control"
-a42[5, 3:4]<-"WT"
+aa42<-read.csv("Data/a42_mutants1.3.csv", stringsAsFactors = F)
+aa42$Mutants<-gsub(" .*","",aa42$Mutants)
+aa42[1, 3:4]<-"Control"
+aa42[5, 3:4]<-"WT"
 #extract the AA and Property info
-a42_2<-a42[,2:4]
+aa42_2<-aa42[,2:4]
 
-while(length(ind <- which(a42$Mutated.Amino.Acid == "")) > 0){
-    a42$Mutated.Amino.Acid[ind] <- a42$Mutated.Amino.Acid[ind -1]
+while(length(ind <- which(aa42$Mutated.Amino.Acid == "")) > 0){
+    aa42$Mutated.Amino.Acid[ind] <- aa42$Mutated.Amino.Acid[ind -1]
 }
-while(length(ind <- which(a42$Properties.of.Amino.Acid == "")) > 0){
-    a42$Properties.of.Amino.Acid[ind] <- a42$Properties.of.Amino.Acid[ind -1]
+while(length(ind <- which(aa42$Properties.of.Amino.Acid == "")) > 0){
+    aa42$Properties.of.Amino.Acid[ind] <- aa42$Properties.of.Amino.Acid[ind -1]
 }
 
 #extract the AA and Property info
-df<-a42_2[which(a42_2$Mutated.Amino.Acid!=''),]
+df<-aa42_2[which(aa42_2$Mutated.Amino.Acid!=''),]
 #rename the column 
 colnames(df)[2:3]<-c("AA","Property")
 
 
 
 # calculate the mean and sd for each antibiotics
-antibio<-colnames(a42)[5:8] 
+antibio<-colnames(aa42)[5:8] 
 sum<-list()
 for (i in 1:length(antibio)){
-    df1<-aggregate(a42[,antibio[i]], list(a42$Mutants), mean, na.rm=T)
-    df2<-aggregate(a42[,antibio[i]], list(a42$Mutants), sd, na.rm=T)
+    df1<-aggregate(aa42[,antibio[i]], list(aa42$Mutants), mean, na.rm=T)
+    df2<-aggregate(aa42[,antibio[i]], list(aa42$Mutants), sd, na.rm=T)
     df1$SD<-df2$x
     colnames(df1)[1:2]<-c("Mutants","Mean")
     df1$Antibiotics<-antibio[i]
@@ -74,17 +74,17 @@ ggsave(filename="Output/Mean.byMutatnts.byAntibio.1.3.pdf",width =12, height =8)
 
 
 # create a plot with mean by property type:
-colnames(a42)
-aa<-melt(a42, id.vars = "Properties.of.Amino.Acid", measure.vars=c("Amikacin","Kanamycin","Tobramycin","Neomycin" ))
+colnames(aa42)
+AA<-melt(aa42, id.vars = "Properties.of.Amino.Acid", measure.vars=c("Amikacin","Kanamycin","Tobramycin","Neomycin" ))
 
-propSum<-aggregate(.~Properties.of.Amino.Acid+variable, aa, mean, na.rm=T)
-propSD<-aggregate(.~Properties.of.Amino.Acid+variable, aa, sd, na.rm=T)
-propSum$SD<-propSD$value
-colnames(propSum)[1:3]<-c("Property", "Antibiotics", "Mean")
-propSum$Property<-factor(propSum$Property, levels=c("Control","WT","Acidic","Aliphatic","Aromatic","Basic","Cyclic","Neutral","Sulfur containing"))
+propSummary<-aggregate(.~Properties.of.Amino.Acid+variable, AA, mean, na.rm=T)
+propertySD<- aggregate(.~Properties.of.Amino.Acid+variable, AA, sd, na.rm=T)
+propSummary$SD<-propertySD$value
+colnames(propSummary)[1:3]<-c("Property", "Antibiotics", "Mean")
+propSummary$Property<-factor(propSummary$Property, levels=c("Control","WT","Acidic","Aliphatic","Aromatic","Basic","Cyclic","Neutral","Sulfur containing"))
 
 col4<-qualitative_hcl(4, palette="Set2")
-ggplot(propSum)+
+ggplot(propSummary)+
     geom_bar(aes(x=Property, y=Mean, fill=Antibiotics ), position=position_dodge(.9), stat="identity",width=0.8)+
     geom_errorbar(aes(x=Property, y=Mean, ymin=Mean-SD, ymax=Mean+SD,fill=Antibiotics), position=position_dodge(.9), width=.2, color="gray30")+
     theme_bw()+
@@ -96,4 +96,15 @@ ggplot(propSum)+
           panel.grid.major.x = element_blank())+
     scale_fill_manual(values=col4)
 ggsave(filename="Output/Mean.byProperty.byAntibiotics1.3.pdf",width =7, height =5)
+
+####
+wilcox.res<-data.frame(Property=property)
+for ( i in 1:7){
+    result<-wilcox.test(AA$value[AA$Properties.of.Amino.Acid=="WT"],AA$value[AA$Properties.of.Amino.Acid==property[i]], alternative ="less", paired=FALSE )
+    wilcox.res$W[i]<-result[[1]]
+    wilcox.res$P_value[i]<-result[[3]]
+    wilcox.res$SamplesSie[i]<-length(AA$value[AA$Properties.of.Amino.Acid==property[i]])
+}
+
+write.csv(wilcox.res, "Output/Wilcox.results.compareToWT_1.3.csv")
 

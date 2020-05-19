@@ -125,7 +125,7 @@ ggplot(propSum2)+
           axis.text.y = element_text( size=10, color=1),
           legend.title = element_blank(),
           panel.grid.major.x = element_blank())
-ggsave(filename="Output/Mean.byProperty_grouped.13.pdf",width =6, height =5)
+ggsave(filename="Output/Mean.byProperty_grouped_noNeomycin.13.pdf",width =6, height =5)
 
 
 #######
@@ -153,8 +153,78 @@ for ( i in 1:7){
     result<-wilcox.test(aa2$value[aa2$Properties.of.Amino.Acid=="WT"],aa2$value[aa2$Properties.of.Amino.Acid==property[i]], alternative ="less", paired=FALSE )
     wilcox.results$W[i]<-result[[1]]
     wilcox.results$P_value[i]<-result[[3]]
+    wilcox.results$SamplesSie[i]<-length(aa2$value[aa2$Properties.of.Amino.Acid==property[i]])
     }
 
 write.csv(wilcox.results, "Output/Wilcox.results.compareToWT.csv")
+wilcox.results$P_value
 
+
+## add signficance
+ggplot(propSum2)+
+    geom_bar(aes(x=Property, y=Mean ), stat="identity",width=0.8, fill=colors[6])+
+    geom_errorbar(aes(x=Property, y=Mean, ymin=Mean-SD, ymax=Mean+SD), width=.2, color="gray30")+
+    theme_bw()+
+    ylab("Zone of inhibition (mm)")+
+    labs(x="")+  
+    theme(axis.text.x = element_text(angle = 90, size=12, hjust=1, color=1),
+          axis.text.y = element_text( size=10, color=1),
+          legend.title = element_blank(),
+          panel.grid.major.x = element_blank())+
+    geom_text(label="*", x=5, y=2.25, size=5, color="red",hjust=0)+
+    geom_text(label="*", x=6, y=2.25, size=5, color="red",hjust=0)+
+    geom_text(label="*", x=7, y=2.25, size=5, color="red",hjust=0)+
+    geom_text(label="*", x=8, y=2.25, size=5, color="red",hjust=0)+
+    geom_text(label="*", x=9, y=2.25, size=5, color="red",hjust=0)
+    
+ggsave(filename="Output/Mean.byProperty_grouped_noNeomycin.13_significence.pdf",width =6, height =5)
+
+
+
+#### Include Neomycin
+propSum3<-aggregate(aa$value, list(aa$Properties.of.Amino.Acid), mean, na.rm=T)
+propSD3<-aggregate(aa$value, list(aa$Properties.of.Amino.Acid), sd, na.rm=T)
+propSum3$SD<-propSD3$x
+colnames(propSum3)[1:3]<-c("Property", "Mean","SD")
+
+#order 'control', 'wt' and acending order
+dt3<-propSum3[propSum3$Property!="Control" & propSum3$Property!="WT",]
+dt3<-dt3[order(dt3$Mean),]
+propSum3$Property<-factor(propSum3$Property, levels=c("Control","WT",paste(dt3$Property)))
+
+
+#######
+#run stats on some of them:
+
+property<-paste(propSum$Property[1:9])
+property<-property[c(-5,-9)]
+
+
+# 1. WT vs Cylic AA
+wilcox.results2<-data.frame(Property=property)
+for ( i in 1:7){
+    result<-wilcox.test(aa$value[aa$Properties.of.Amino.Acid=="WT"],aa$value[aa$Properties.of.Amino.Acid==property[i]], alternative ="less", paired=FALSE )
+    wilcox.results2$W[i]<-result[[1]]
+    wilcox.results2$P_value[i]<-result[[3]]
+    wilcox.results2$SamplesSie[i]<-length(aa$value[aa$Properties.of.Amino.Acid==property[i]])
+}
+write.csv(wilcox.results2, "Output/Wilcox.results.compareToWT13_Neomycin.csv")
+wilcox.results2$P_value
+
+#col4<-qualitative_hcl(4, palette="Set2")
+ggplot(propSum3)+
+    geom_bar(aes(x=Property, y=Mean ), stat="identity",width=0.8, fill=colors[7])+
+    geom_errorbar(aes(x=Property, y=Mean, ymin=Mean-SD, ymax=Mean+SD), width=.2, color="gray30")+
+    theme_bw()+
+    ylab("Zone of inhibition (mm)")+
+    labs(x="")+  
+    theme(axis.text.x = element_text(angle = 90, size=12, hjust=1, color=1),
+          axis.text.y = element_text( size=10, color=1),
+          legend.title = element_blank(),
+          panel.grid.major.x = element_blank())+
+    geom_text(label="*", x=6, y=2.25, size=5, color="red",hjust=0)+
+    geom_text(label="*", x=7, y=2.25, size=5, color="red",hjust=0)+
+    geom_text(label="*", x=8, y=2.25, size=5, color="red",hjust=0)+
+    geom_text(label="*", x=9, y=2.25, size=5, color="red",hjust=0)
+ggsave(filename="Output/Mean.byProperty_grouped.13.pdf",width =6, height =5)
 
